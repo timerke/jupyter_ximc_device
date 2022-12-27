@@ -334,6 +334,7 @@ class XimcDevice:
     @check_open
     def set_user_multiplier(self, multiplier: float) -> None:
         self._user_multiplier = 1 / multiplier
+        self._user_units.A = self._user_multiplier
 
     @check_open
     def stop_motion(self) -> None:

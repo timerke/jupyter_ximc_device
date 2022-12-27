@@ -83,8 +83,9 @@ class OpenPanel:
             except Exception as exc:
                 ut.print_flush(f"Failed to read user units from file {change['new']['value'][0]['name']}: {exc}")
             else:
-                ut.print_flush(f"SET {multiplier}")
                 self.float_text_user_units.value = multiplier
+                if self._device:
+                    self._device.set_user_multiplier(multiplier)
 
     def handle_user_units_change(self, change: Dict[str, Any]) -> None:
         """
