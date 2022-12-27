@@ -1,7 +1,7 @@
 import ctypes
 import os
 import sys
-from typing import Any, Optional, Tuple
+from typing import Any, List, Tuple
 import ipywidgets as widgets
 from IPython.display import display
 import libximc
@@ -51,11 +51,10 @@ def print_flush(text: Any) -> None:
     print(text, flush=True)
 
 
-def search_device() -> Tuple[Optional[str], bool]:
+def search_devices() -> List[Tuple[str, str]]:
     """
-    Automatic search of controller. If no real controllers are found, a virtual
-    controller will be returned.
-    :return: controller name and flag whether the controller is virtual.
+    Automatic search of controllers (real and virtual).
+    :return: list of found real and virtual controllers.
     """
 
     print_flush("Searching for controllers...")
@@ -73,32 +72,23 @@ def search_device() -> Tuple[Optional[str], bool]:
     devices = libximc.lib.enumerate_devices(probe_flags, enum_hints)
 
     device_count = libximc.lib.get_device_count(devices)
-    print_flush(f"Device count: {device_count}")
+    print_flush(f"Real device count: {device_count}")
 
     controller_name = libximc.controller_name_t()
+    found_devices = []
     for device_index in range(device_count):
         device_name = libximc.lib.get_device_name(devices, device_index)
         result = libximc.lib.get_enumerate_device_controller_name(devices, device_index, ctypes.byref(controller_name))
         if result == libximc.Result.Ok:
-            print_flush(f"Device #{device_index}, name: {device_name}, "
-                        f"controller name: {controller_name.ControllerName}")
+            found_devices.append(("real", device_name.decode()))
 
-    is_virtual = False
-    device_name_to_open = None
-    if device_count > 0:
-        device_name_to_open = libximc.lib.get_device_name(devices, 0)
-    elif sys.version_info >= (3, 0):
+    if sys.version_info >= (3, 0):
         virtual_device_file = _get_virtual_device_file()
-        device_name_to_open = f"xi-emu:///{virtual_device_file}"
-        is_virtual = True
-        print_flush("Real usb controller not found.\nReal ethernet controller not found.\n"
-                    "Virtual controller found.")
+        virtual_device_name = f"xi-emu:///{virtual_device_file}"
+        found_devices.append(("virtual", virtual_device_name))
 
-    if not device_name_to_open:
+    if not found_devices:
         print_flush("Could not find any device")
-        return None, is_virtual
+        return []
 
-    if isinstance(device_name_to_open, bytes):
-        device_name_to_open = device_name_to_open.decode()
-
-    return device_name_to_open, is_virtual
+    return found_devices

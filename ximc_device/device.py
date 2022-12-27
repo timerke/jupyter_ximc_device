@@ -1,5 +1,6 @@
 import ctypes
 import logging
+import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import libximc
@@ -57,6 +58,10 @@ class XimcDevice:
     @property
     def device_id(self) -> int:
         return self._device_id
+
+    @property
+    def device_uri(self) -> str:
+        return self._device_uri
 
     def _get_bootloader_or_firmware_version(self, firmware: bool = False) -> str:
         """
@@ -327,21 +332,29 @@ class XimcDevice:
             self._set_params_for_virtual()
 
     @check_open
+    def set_user_multiplier(self, multiplier: float) -> None:
+        self._user_multiplier = multiplier
+
+    @check_open
     def stop_motion(self) -> None:
         if libximc.lib.command_sstp(self._device_id) != libximc.Result.Ok:
             logging.warning("Failed to stop moving")
 
 
 if __name__ == "__main__":
-    device_uri, is_virtual = ut.search_device()
-    device = XimcDevice(device_uri, is_virtual)
+    devices_type_and_uri = ut.search_devices()
+    if not devices_type_and_uri:
+        sys.exit(0)
+
+    is_virtual = devices_type_and_uri[0][0].lower() == "virtual"
+    device = XimcDevice(devices_type_and_uri[0][1], is_virtual)
     ut.print_device_info(device)
 
     POS_1 = 5
     print(f"\nPosition before moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
     device.move_to_position_in_user_units(POS_1)
     while device.check_moving():
-        print(f"\tMoving to {device.get_params_in_user_units()}")
+        print(f"\tMoving to {device.get_position_in_user_units()}")
         time.sleep(0.5)
     print(f"Position after moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
 

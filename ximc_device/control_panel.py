@@ -2,100 +2,131 @@ import queue
 import threading
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
-from IPython.display import display
-from ximc_device.device import XimcDevice
+from IPython.display import clear_output, display
+from ximc_device import utils as ut
+from ximc_device.open_panel import OpenPanel
 
 
 class ControlPanel:
+    """
+    Class for panel with widgets to move device.
+    """
 
-    def __init__(self, device: XimcDevice) -> None:
+    def __init__(self, open_panel: Optional[OpenPanel] = None) -> None:
         """
-        :param device: device.
+        :param open_panel: panel with widgets to open and close device.
         """
 
-        self._device: XimcDevice = device
+        self._open_panel: Optional[OpenPanel] = open_panel
         v_box = self._create_widgets()
-        self._figures_thread: FiguresOutput = FiguresOutput(self._device)
+        self._figures_thread: FiguresOutput = FiguresOutput()
         self._figures_thread.start_thread()
         display(widgets.VBox([v_box, self._figures_thread.box]))
 
+    def _check_device(self) -> bool:
+        """
+        Method checks that the device is open and can be operated.
+        :return: True if device is open.
+        """
+
+        if self._open_panel and self._open_panel.device:
+            with self.output:
+                clear_output()
+            return True
+        with self.output:
+            clear_output(wait=True)
+            ut.print_flush("To move motor, you must first open device")
+        return False
+
     def _create_widgets(self) -> widgets.VBox:
         """
-        Method creates widgets for motion panel.
+        Method creates widgets for control panel.
+        :return: box with control widgets.
         """
 
         style = {"description_width": "150px"}
+
         self.button_move_left = widgets.Button(description="Move left", icon="arrow-left")
         self.button_move_left.on_click(lambda _: self.move_left())
         self.button_stop = widgets.Button(description="Stop", icon="stop")
-        self.button_stop.on_click(lambda _: self._device.stop_motion())
+        self.button_stop.on_click(lambda _: self.stop_motion())
         self.button_move_right = widgets.Button(description="Move right", icon="arrow-right")
         self.button_move_right.on_click(lambda _: self.move_right())
-        h_box_0 = widgets.HBox([self.button_move_left, self.button_stop, self.button_move_right])
+        h_box_1 = widgets.HBox([self.button_move_left, self.button_stop, self.button_move_right])
 
         self.int_text_widget_position = widgets.BoundedIntText(value=0, min=-1000, max=1000, step=1,
                                                                description="Position, mm", style=style)
         self.button_move_to = widgets.Button(description="Move to")
         self.button_move_to.on_click(lambda _: self.move_to_position())
-        h_box_1 = widgets.HBox([self.button_move_to, self.int_text_widget_position])
+        h_box_2 = widgets.HBox([self.button_move_to, self.int_text_widget_position])
 
         self.int_text_widget_shift = widgets.BoundedIntText(value=0, min=-1000, max=1000, step=1,
                                                             description="Shift, mm", style=style)
         self.button_shift_on = widgets.Button(description="Shift on")
         self.button_shift_on.on_click(lambda _: self.move_on_shift())
-        h_box_2 = widgets.HBox([self.button_shift_on, self.int_text_widget_shift])
+        h_box_3 = widgets.HBox([self.button_shift_on, self.int_text_widget_shift])
 
-        return widgets.VBox([h_box_0, h_box_1, h_box_2])
+        self.output = widgets.Output()
+        return widgets.VBox([h_box_1, h_box_2, h_box_3, self.output])
 
     def move_left(self) -> None:
         """
         Method runs motion to left.
         """
 
-        self._device.stop_motion()
-        self._figures_thread.add_task(self._device.move_left)
+        if self._check_device():
+            self._open_panel.device.stop_motion()
+            self._figures_thread.add_task(self._open_panel.device.move_left, device=self._open_panel.device)
 
     def move_on_shift(self) -> None:
         """
         Method runs motion on given shift.
         """
 
-        self._device.stop_motion()
-        shift = self.int_text_widget_shift.value
-        current_position = self._device.get_position_in_user_units()
-        position_to_move = current_position + shift
-        self._figures_thread.add_task(self._device.move_to_position_in_user_units, position_to_move)
+        if self._check_device():
+            self._open_panel.device.stop_motion()
+            shift = self.int_text_widget_shift.value
+            current_position = self._open_panel.device.get_position_in_user_units()
+            position_to_move = current_position + shift
+            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_units, position_to_move,
+                                          device=self._open_panel.device)
 
     def move_right(self) -> None:
         """
         Method runs motion to right.
         """
 
-        self._device.stop_motion()
-        self._figures_thread.add_task(self._device.move_right)
+        if self._check_device():
+            self._open_panel.device.stop_motion()
+            self._figures_thread.add_task(self._open_panel.device.move_right, device=self._open_panel.device)
 
     def move_to_position(self) -> None:
         """
         Method runs motion to given position.
         """
 
-        self._device.stop_motion()
-        position = self.int_text_widget_position.value
-        self._figures_thread.add_task(self._device.move_to_position_in_user_units, position)
+        if self._check_device():
+            self._open_panel.device.stop_motion()
+            position = self.int_text_widget_position.value
+            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_units, position,
+                                          device=self._open_panel.device)
+
+    def stop_motion(self) -> None:
+        """
+        Method stops motion.
+        """
+
+        if self._check_device():
+            self._open_panel.device.stop_motion()
 
 
 class FiguresOutput:
 
-    def __init__(self, device: XimcDevice) -> None:
-        """
-        :param device: device.
-        """
-
+    def __init__(self) -> None:
         self._axs: Dict[str, Any] = None
-        self._device: XimcDevice = device
         self._lock: threading.Lock = threading.Lock()
         self._running: bool = False
         self._tasks: queue.Queue = queue.Queue()
@@ -156,25 +187,28 @@ class FiguresOutput:
             return -1
         return 0.9 * min_value
 
-    def add_task(self, task, *args) -> None:
+    def add_task(self, task, *args, **kwargs) -> None:
         """
         Method adds new task.
         :param task: function to be performed for task;
-        :param args: arguments for task.
+        :param args: arguments for task;
+        :param kwargs:
         """
 
         with self._lock:
-            self._tasks.put(lambda: self.do_task(task, *args))
+            self._tasks.put(lambda: self.do_task(task, *args, **kwargs))
 
-    def do_task(self, move_function, *args) -> None:
+    def do_task(self, move_function, *args, **kwargs) -> None:
         """
         Method performs task of starting a specific device movement.
         :param move_function: device move function;
-        :param args: arguments for move function.
+        :param args: arguments for move function;
+        :param kwargs:
         """
 
+        device = kwargs["device"]
         start_time = datetime.now()
-        params = self._device.get_params_in_user_units()
+        params = device.get_params_in_user_units()
         data = {"position": [params["position"]],
                 "speed": [params["speed"]],
                 "power_current": [params["power_current"]],
@@ -182,8 +216,8 @@ class FiguresOutput:
                 "temperature": [params["temperature"]]}
         times = [0]
         move_function(*args)
-        while self._device.check_moving():
-            device_params = self._device.get_params_in_user_units()
+        while device.check_moving():
+            device_params = device.get_params_in_user_units()
             if device_params:
                 delta_time = datetime.now() - start_time
                 times.append(delta_time.total_seconds())
