@@ -72,16 +72,29 @@ class OpenPanel:
         :param change: dictionary with data.
         """
 
-        if not change["new"] or "value" not in change["new"]:
+        def check(change_: Dict[str, Any]) -> Optional[Tuple[str, object]]:
+            try:
+                if change_["new"]:
+                    if "value" in change_["new"]:
+                        return change_["new"]["value"][0]["name"], change_["new"]["value"][0]["content"]
+                    if "data" in change_["new"]:
+                        return change_["new"]["metadata"][0]["name"], change_["new"]["data"][0]
+            except Exception:
+                pass
+            return None
+
+        result = check(change)
+        if result is None:
             return
+        file_name, content = result
         with self.output:
             clear_output(wait=True)
             try:
                 parser = configparser.ConfigParser()
-                parser.read_string(change["new"]["value"][0]["content"].tobytes().decode())
+                parser.read_string(content.tobytes().decode())
                 multiplier = float(parser["User_units"]["Unit_multiplier"])
             except Exception as exc:
-                ut.print_flush(f"Failed to read user units from file {change['new']['value'][0]['name']}: {exc}")
+                ut.print_flush(f"Failed to read user units from file {file_name}: {exc}")
             else:
                 self.float_text_user_units.value = multiplier
                 if self._device:
