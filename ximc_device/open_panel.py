@@ -45,7 +45,7 @@ class OpenPanel:
         self.float_text_user_units.observe(self.handle_user_units_change, names="value")
         self.file_upload = widgets.FileUpload(description="Upload config file", accept=".cfg", multiple=False,
                                               layout=widgets.Layout(width="250px"))
-        self.file_upload.observe(self.handle_upload_config_file, names="value")
+        self.file_upload.observe(self.handle_upload_config_file)
         h_box_2 = widgets.HBox([self.label, self.float_text_user_units, self.file_upload])
 
         self.output = widgets.Output()
@@ -72,17 +72,18 @@ class OpenPanel:
         :param change: dictionary with data.
         """
 
-        if not change["new"]:
+        if not change["new"] or "value" not in change["new"]:
             return
         with self.output:
             clear_output(wait=True)
             try:
                 parser = configparser.ConfigParser()
-                parser.read_string(change["new"][0]["content"].tobytes().decode())
+                parser.read_string(change["new"]["value"][0]["content"].tobytes().decode())
                 multiplier = float(parser["User_units"]["Unit_multiplier"])
-            except Exception:
-                ut.print_flush(f"Failed to read user units from file {change['new'][0]['name']}")
+            except Exception as exc:
+                ut.print_flush(f"Failed to read user units from file {change['new']['value'][0]['name']}: {exc}")
             else:
+                ut.print_flush(f"SET {multiplier}")
                 self.float_text_user_units.value = multiplier
 
     def handle_user_units_change(self, change: Dict[str, Any]) -> None:

@@ -50,7 +50,7 @@ class XimcDevice:
         self._device_id: int = -1
         self._device_uri: str = device_uri
         self._is_virtual: bool = is_virtual
-        self._user_multiplier: float = user_multiplier if user_multiplier else self.USER_MULTIPLIER
+        self._user_multiplier: float = 1 / user_multiplier if user_multiplier else self.USER_MULTIPLIER
         self._user_units: libximc.calibration_t = libximc.calibration_t()
         if not defer_open:
             self.open_device()
@@ -333,7 +333,7 @@ class XimcDevice:
 
     @check_open
     def set_user_multiplier(self, multiplier: float) -> None:
-        self._user_multiplier = multiplier
+        self._user_multiplier = 1 / multiplier
 
     @check_open
     def stop_motion(self) -> None:
@@ -354,7 +354,7 @@ if __name__ == "__main__":
     print(f"\nPosition before moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
     device.move_to_position_in_user_units(POS_1)
     while device.check_moving():
-        print(f"\tMoving to {device.get_position_in_user_units()}")
+        print(f"\tMoving to {device.get_position_in_user_units():.3f}")
         time.sleep(0.5)
     print(f"Position after moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
 
