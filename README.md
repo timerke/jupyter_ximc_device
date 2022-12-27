@@ -1,2 +1,22 @@
 # ximc_device
-An example of working with a XIMC motor controller in jupyter.
+Python-обертка для работы с контроллерами шаговых двигателей с помощью библиотеки [libximc](https://pypi.org/project/libximc/).
+
+## Запуск примера на Jupyter
+
+1. Установите необходимые зависимости. Для этого перейдите в папкy **scripts** и выполните скрипт:
+   - **install.bat**, если вы работаете в *Windows*;
+   - **install.sh**, если вы работаете в *Linux*.
+2. Запустите пример. Для этого перейдите в папку **scripts** и выполните скрипт:
+   - **run.bat**, если вы работаете в *Windows*;
+   - **run.sh**, если вы работаете в *Linux*.
+3. Далее следуйте инструкции из примера **jupyter_demo.ipynb**.
+
+## Запуск примера на Google Colab
+
+1. Откройте в браузере [Google Colab](https://colab.research.google.com/).
+
+2. В появившемся окошке выберите "Загрузить" и выберите файл **jupyter_demo.ipynb**.
+
+   ![1](./data/1.png)
+
+3. Далее следуйте инструкции из примера **jupyter_demo.ipynb**.
