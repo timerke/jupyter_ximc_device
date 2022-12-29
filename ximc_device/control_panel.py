@@ -89,9 +89,9 @@ class ControlPanel:
         if self._check_device():
             self._open_panel.device.stop_motion()
             shift = self.int_text_widget_shift.value
-            current_position = self._open_panel.device.get_position_in_user_units()
+            current_position = self._open_panel.device.get_position_in_user_unit()
             position_to_move = current_position + shift
-            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_units, position_to_move,
+            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_unit, position_to_move,
                                           device=self._open_panel.device)
 
     def move_right(self) -> None:
@@ -111,7 +111,7 @@ class ControlPanel:
         if self._check_device():
             self._open_panel.device.stop_motion()
             position = self.int_text_widget_position.value
-            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_units, position,
+            self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_unit, position,
                                           device=self._open_panel.device)
 
     def stop_motion(self) -> None:
@@ -208,7 +208,7 @@ class FiguresOutput:
 
         device = kwargs["device"]
         start_time = datetime.now()
-        params = device.get_params_in_user_units()
+        params = device.get_params_in_user_unit()
         data = {"position": [params["position"]],
                 "speed": [params["speed"]],
                 "power_current": [params["power_current"]],
@@ -217,7 +217,7 @@ class FiguresOutput:
         times = [0]
         move_function(*args)
         while device.check_moving():
-            device_params = device.get_params_in_user_units()
+            device_params = device.get_params_in_user_unit()
             if device_params:
                 delta_time = datetime.now() - start_time
                 times.append(delta_time.total_seconds())

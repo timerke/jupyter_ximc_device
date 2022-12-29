@@ -26,14 +26,14 @@ class XimcDevice:
     """
 
     ACCEL_IN_STEPS: int = 1
-    ACCEL_IN_USER_UNITS: float = 1
+    ACCEL_IN_USER_UNIT: float = 1
     ANTIPLAY_SPEED_IN_STEPS: int = 5
-    ANTIPLAY_SPEED_IN_USER_UNITS: float = 5
+    ANTIPLAY_SPEED_IN_USER_UNIT: float = 5
     CONTROLLER_NAME: str = "VirtualXimc"
     DECEL_IN_STEPS: int = 1
-    DECEL_IN_USER_UNITS: float = 1
+    DECEL_IN_USER_UNIT: float = 1
     SPEED_IN_STEPS: int = 5
-    SPEED_IN_USER_UNITS: float = 5
+    SPEED_IN_USER_UNIT: float = 5
     UANTIPLAY_SPEED_IN_STEPS: int = 0
     USER_MULTIPLIER: float = 1 / 400
     USPEED_IN_STEPS: int = 0
@@ -51,7 +51,7 @@ class XimcDevice:
         self._device_uri: str = device_uri
         self._is_virtual: bool = is_virtual
         self._user_multiplier: float = 1 / user_multiplier if user_multiplier else self.USER_MULTIPLIER
-        self._user_units: libximc.calibration_t = libximc.calibration_t()
+        self._user_unit: libximc.calibration_t = libximc.calibration_t()
         if not defer_open:
             self.open_device()
 
@@ -154,20 +154,20 @@ class XimcDevice:
         if libximc.lib.set_move_settings(self._device_id, ctypes.byref(move_settings)) != libximc.Result.Ok:
             logging.warning("Failed to set motion settings")
 
-    def _set_move_settings_with_user_units(self) -> None:
+    def _set_move_settings_with_user_unit(self) -> None:
         """
-        Method sets default motion settings with user units for virtual device.
+        Method sets default motion settings with user unit for virtual device.
         """
 
         move_settings = libximc.move_settings_calb_t()
-        move_settings.Speed = ctypes.c_float(self.SPEED_IN_USER_UNITS)
-        move_settings.Accel = ctypes.c_float(self.ACCEL_IN_USER_UNITS)
-        move_settings.Decel = ctypes.c_float(self.DECEL_IN_USER_UNITS)
-        move_settings.AntiplaySpeed = ctypes.c_float(self.ANTIPLAY_SPEED_IN_USER_UNITS)
+        move_settings.Speed = ctypes.c_float(self.SPEED_IN_USER_UNIT)
+        move_settings.Accel = ctypes.c_float(self.ACCEL_IN_USER_UNIT)
+        move_settings.Decel = ctypes.c_float(self.DECEL_IN_USER_UNIT)
+        move_settings.AntiplaySpeed = ctypes.c_float(self.ANTIPLAY_SPEED_IN_USER_UNIT)
         move_settings.MoveFlags = ctypes.c_uint(0)
         if libximc.lib.set_move_settings_calb(self._device_id, ctypes.byref(move_settings),
-                                              ctypes.byref(self._user_units)) != libximc.Result.Ok:
-            logging.warning("Failed to set motion settings with user units")
+                                              ctypes.byref(self._user_unit)) != libximc.Result.Ok:
+            logging.warning("Failed to set motion settings with user unit")
 
     def _set_params_for_virtual(self) -> None:
         """
@@ -175,7 +175,7 @@ class XimcDevice:
         """
 
         self._set_move_settings()
-        self._set_move_settings_with_user_units()
+        self._set_move_settings_with_user_unit()
         self._set_controller_name()
         self._set_position()
 
@@ -222,7 +222,7 @@ class XimcDevice:
         data.append(("Serial number", self._get_serial_number()))
         data.append(("Firmware version", self._get_bootloader_or_firmware_version(True)))
         data.append(("Bootloader version", self._get_bootloader_or_firmware_version(False)))
-        data.append(("Controller name", self._get_controller_name()))
+        data.append(("Friendly name", self._get_controller_name()))
         return data
 
     @check_open
@@ -240,9 +240,9 @@ class XimcDevice:
         return {}
 
     @check_open
-    def get_params_in_user_units(self) -> Dict[str, Any]:
+    def get_params_in_user_unit(self) -> Dict[str, Any]:
         status = libximc.status_calb_t()
-        if libximc.lib.get_status_calb(self._device_id, ctypes.byref(status), ctypes.byref(self._user_units)) ==\
+        if libximc.lib.get_status_calb(self._device_id, ctypes.byref(status), ctypes.byref(self._user_unit)) ==\
                 libximc.Result.Ok:
             return {"moving_status": status.MvCmdSts,
                     "position": status.CurPosition,
@@ -263,13 +263,13 @@ class XimcDevice:
             return position.Position
 
     @check_open
-    def get_position_in_user_units(self) -> Optional[float]:
+    def get_position_in_user_unit(self) -> Optional[float]:
         """
-        :return: position in user units.
+        :return: position in user unit.
         """
 
         position = libximc.get_position_calb_t()
-        if libximc.lib.get_position_calb(self._device_id, ctypes.byref(position), ctypes.byref(self._user_units)) == \
+        if libximc.lib.get_position_calb(self._device_id, ctypes.byref(position), ctypes.byref(self._user_unit)) == \
                 libximc.Result.Ok:
             return position.Position
 
@@ -302,13 +302,13 @@ class XimcDevice:
             logging.warning("Failed to start move to position %d", position)
 
     @check_open
-    def move_to_position_in_user_units(self, position: float) -> None:
+    def move_to_position_in_user_unit(self, position: float) -> None:
         """
-        Method runs device to given position in mm.
+        Method runs device to given position in user unit.
         :param position: position to move.
         """
 
-        if libximc.lib.command_move_calb(self._device_id, ctypes.c_float(position), ctypes.byref(self._user_units)) != \
+        if libximc.lib.command_move_calb(self._device_id, ctypes.c_float(position), ctypes.byref(self._user_unit)) != \
                 libximc.Result.Ok:
             logging.warning("Failed to start move to position %f in user units", position)
 
@@ -324,9 +324,9 @@ class XimcDevice:
         self._device_id = device_id
         logging.debug("Device with ID %d was opened", self._device_id)
 
-        self._user_units = libximc.calibration_t()
-        self._user_units.A = self._user_multiplier
-        self._user_units.MicrostepMode = self._get_engine_microstep_mode()
+        self._user_unit = libximc.calibration_t()
+        self._user_unit.A = self._user_multiplier
+        self._user_unit.MicrostepMode = self._get_engine_microstep_mode()
 
         if self._is_virtual:
             self._set_params_for_virtual()
@@ -334,7 +334,7 @@ class XimcDevice:
     @check_open
     def set_user_multiplier(self, multiplier: float) -> None:
         self._user_multiplier = 1 / multiplier
-        self._user_units.A = self._user_multiplier
+        self._user_unit.A = self._user_multiplier
 
     @check_open
     def stop_motion(self) -> None:
@@ -352,25 +352,25 @@ if __name__ == "__main__":
     ut.print_device_info(device)
 
     POS_1 = 5
-    print(f"\nPosition before moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
-    device.move_to_position_in_user_units(POS_1)
+    print(f"\nPosition before moving to position {POS_1:.3f}: {device.get_position_in_user_unit():.3f}")
+    device.move_to_position_in_user_unit(POS_1)
     while device.check_moving():
-        print(f"\tMoving to {device.get_position_in_user_units():.3f}")
+        print(f"\tMoving to {device.get_position_in_user_unit():.3f}")
         time.sleep(0.5)
-    print(f"Position after moving to position {POS_1:.3f}: {device.get_position_in_user_units():.3f}")
+    print(f"Position after moving to position {POS_1:.3f}: {device.get_position_in_user_unit():.3f}")
 
     POS_2 = -13
-    print(f"\nPosition before moving to position {POS_2:.3f}: {device.get_position_in_user_units():.3f}")
-    device.move_to_position_in_user_units(POS_2)
+    print(f"\nPosition before moving to position {POS_2:.3f}: {device.get_position_in_user_unit():.3f}")
+    device.move_to_position_in_user_unit(POS_2)
     while device.check_moving():
-        print(f"\tMoving to {device.get_position_in_user_units():.3f}")
+        print(f"\tMoving to {device.get_position_in_user_unit():.3f}")
         time.sleep(0.5)
 
-    print(f"\nPosition before moving to right {device.get_position_in_user_units():.3f}")
+    print(f"\nPosition before moving to right {device.get_position_in_user_unit():.3f}")
     device.move_right()
     i = 0
     while device.check_moving():
-        print(f"\tMoving to {device.get_position_in_user_units():.3f}")
+        print(f"\tMoving to {device.get_position_in_user_unit():.3f}")
         i += 1
         time.sleep(1)
         if i > 3:

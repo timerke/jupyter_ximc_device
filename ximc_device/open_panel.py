@@ -16,6 +16,7 @@ class OpenPanel:
     def __init__(self) -> None:
         self._device: Optional[XimcDevice] = None
         self._devices_type_and_uri: List[Tuple[str, str]] = []
+        self._user_unit: str = "user_unit"
         self._create_widgets()
         self.search_devices()
 
@@ -38,15 +39,15 @@ class OpenPanel:
         self.button_close.on_click(lambda _: self.close_device())
         h_box_1 = widgets.HBox([self.button_refresh, self.drop_down_devices, self.button_open, self.button_close])
 
-        self.label = widgets.Label(value="Enter user units or upload a config file for your motor")
-        self.float_text_user_units = widgets.BoundedFloatText(
-            value=self.DEFAULT_USER_UNITS_MULTIPLIER, description="", tooltip="Number of motor steps in one mm",
-            min=1, max=1000000, layout=widgets.Layout(width="100px"), continuous_update=False)
-        self.float_text_user_units.observe(self.handle_user_units_change, names="value")
+        self.label = widgets.Label(value="Enter conversion factor or upload a config file for your motor")
+        self.float_text_user_unit = widgets.BoundedFloatText(
+            value=self.DEFAULT_USER_UNITS_MULTIPLIER, min=0.00000001, max=1000000, layout=widgets.Layout(width="100px"),
+            continuous_update=False)
+        self.float_text_user_unit.observe(self.handle_user_unit_change, names="value")
         self.file_upload = widgets.FileUpload(description="Upload config file", accept=".cfg", multiple=False,
                                               layout=widgets.Layout(width="250px"))
         self.file_upload.observe(self.handle_upload_config_file)
-        h_box_2 = widgets.HBox([self.label, self.float_text_user_units, self.file_upload])
+        h_box_2 = widgets.HBox([self.label, self.float_text_user_unit, self.file_upload])
 
         self.output = widgets.Output()
         v_box = widgets.VBox([h_box_1, h_box_2, self.output])
@@ -92,24 +93,30 @@ class OpenPanel:
             try:
                 parser = configparser.ConfigParser()
                 parser.read_string(content.tobytes().decode())
-                multiplier = float(parser["User_units"]["Unit_multiplier"])
+                unit_multiplier = float(parser["User_units"]["Unit_multiplier"])
+                step_multiplier = float(parser["User_units"]["Step_multiplier"])
+                self._user_unit = parser["User_units"].get("Unit", "user_unit").lower()
             except Exception as exc:
-                ut.print_flush(f"Failed to read user units from file {file_name}: {exc}")
+                ut.print_flush(f"Failed to read user units from file {file_name} ({exc})")
             else:
-                self.float_text_user_units.value = multiplier
+                ut.print_flush(f"Next data read from file {file_name}:")
+                ut.print_flush(f"\tUnit_multiplier = {unit_multiplier}")
+                ut.print_flush(f"\tStep_multiplier = {step_multiplier}")
+                ut.print_flush(f"\tUnit = {self._user_unit}")
+                self.float_text_user_unit.value = step_multiplier / unit_multiplier
                 if self._device:
-                    self._device.set_user_multiplier(multiplier)
+                    self._device.set_user_multiplier(self.float_text_user_unit.value)
 
-    def handle_user_units_change(self, change: Dict[str, Any]) -> None:
+    def handle_user_unit_change(self, change: Dict[str, Any]) -> None:
         """
-        Method handles user units change event.
+        Method handles user unit change event.
         :param change: dictionary with data.
         """
 
-        if change["new"] > self.float_text_user_units.max:
-            multiplier = self.float_text_user_units.max
-        elif change["new"] < self.float_text_user_units.min:
-            multiplier = self.float_text_user_units.min
+        if change["new"] > self.float_text_user_unit.max:
+            multiplier = self.float_text_user_unit.max
+        elif change["new"] < self.float_text_user_unit.min:
+            multiplier = self.float_text_user_unit.min
         else:
             multiplier = change["new"]
         if self._device:
@@ -128,7 +135,7 @@ class OpenPanel:
             for device_type, device_uri in self._devices_type_and_uri:
                 if f"{device_uri} ({device_type})" == self.drop_down_devices.value:
                     is_virtual = device_type.lower() == "virtual"
-                    self._device = XimcDevice(device_uri, is_virtual, self.float_text_user_units.value)
+                    self._device = XimcDevice(device_uri, is_virtual, self.float_text_user_unit.value)
                     if self._device.device_id > 0:
                         ut.print_flush(f"Device {self._device.device_uri} was opened")
                         ut.print_device_info_in_widgets(self._device)
