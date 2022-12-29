@@ -14,6 +14,7 @@ class OpenPanel:
     DEFAULT_USER_UNITS_MULTIPLIER: float = 400
 
     def __init__(self) -> None:
+        self._control_panel = None
         self._device: Optional[XimcDevice] = None
         self._devices_type_and_uri: List[Tuple[str, str]] = []
         self._user_unit: str = "user_unit"
@@ -95,17 +96,20 @@ class OpenPanel:
                 parser.read_string(content.tobytes().decode())
                 unit_multiplier = float(parser["User_units"]["Unit_multiplier"])
                 step_multiplier = float(parser["User_units"]["Step_multiplier"])
-                self._user_unit = parser["User_units"].get("Unit", "user_unit").lower()
+                user_unit = parser["User_units"].get("Unit", "user_unit").lower()
             except Exception as exc:
                 ut.print_flush(f"Failed to read user units from file {file_name} ({exc})")
             else:
+                self.float_text_user_unit.value = step_multiplier / unit_multiplier
                 ut.print_flush(f"Next data read from file {file_name}:")
                 ut.print_flush(f"\tUnit_multiplier = {unit_multiplier}")
                 ut.print_flush(f"\tStep_multiplier = {step_multiplier}")
-                ut.print_flush(f"\tUnit = {self._user_unit}")
-                self.float_text_user_unit.value = step_multiplier / unit_multiplier
+                ut.print_flush(f"\tUnit = {user_unit}")
                 if self._device:
                     self._device.set_user_multiplier(self.float_text_user_unit.value)
+                self._user_unit = user_unit
+                if self._control_panel:
+                    self._control_panel.set_user_unit(self._user_unit)
 
     def handle_user_unit_change(self, change: Dict[str, Any]) -> None:
         """
@@ -119,8 +123,14 @@ class OpenPanel:
             multiplier = self.float_text_user_unit.min
         else:
             multiplier = change["new"]
+        with self.output:
+            clear_output(wait=True)
+            ut.print_flush(f"Set conversion factor to user unit: {multiplier}")
         if self._device:
             self._device.set_user_multiplier(multiplier)
+        self._user_unit = "user_unit"
+        if self._control_panel:
+            self._control_panel.set_user_unit(self._user_unit)
 
     def open_device(self) -> None:
         """
@@ -155,3 +165,7 @@ class OpenPanel:
             self._devices_type_and_uri = ut.search_devices()
         self.drop_down_devices.options = [f"{device_uri} ({device_type})" for device_type, device_uri in
                                           self._devices_type_and_uri]
+
+    def set_control_panel(self, control_panel) -> None:
+        self._control_panel = control_panel
+        self._control_panel.set_user_unit(self._user_unit)

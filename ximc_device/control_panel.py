@@ -15,16 +15,21 @@ class ControlPanel:
     Class for panel with widgets to move device.
     """
 
+    USER_UNIT: str = "user unit"
+
     def __init__(self, open_panel: Optional[OpenPanel] = None) -> None:
         """
         :param open_panel: panel with widgets to open and close device.
         """
 
+        self._user_unit: str = self.USER_UNIT
         self._open_panel: Optional[OpenPanel] = open_panel
         v_box = self._create_widgets()
-        self._figures_thread: FiguresOutput = FiguresOutput()
+        self._figures_thread: FiguresOutput = FiguresOutput(self._user_unit)
         self._figures_thread.start_thread()
         display(widgets.VBox([v_box, self._figures_thread.box]))
+        if self._open_panel:
+            self._open_panel.set_control_panel(self)
 
     def _check_device(self) -> bool:
         """
@@ -58,13 +63,13 @@ class ControlPanel:
         h_box_1 = widgets.HBox([self.button_move_left, self.button_stop, self.button_move_right])
 
         self.int_text_widget_position = widgets.BoundedIntText(value=0, min=-1000, max=1000, step=1,
-                                                               description="Position, mm", style=style)
+                                                               description=f"Position, {self._user_unit}", style=style)
         self.button_move_to = widgets.Button(description="Move to")
         self.button_move_to.on_click(lambda _: self.move_to_position())
         h_box_2 = widgets.HBox([self.button_move_to, self.int_text_widget_position])
 
         self.int_text_widget_shift = widgets.BoundedIntText(value=0, min=-1000, max=1000, step=1,
-                                                            description="Shift, mm", style=style)
+                                                            description=f"Shift, {self._user_unit}", style=style)
         self.button_shift_on = widgets.Button(description="Shift on")
         self.button_shift_on.on_click(lambda _: self.move_on_shift())
         h_box_3 = widgets.HBox([self.button_shift_on, self.int_text_widget_shift])
@@ -114,6 +119,12 @@ class ControlPanel:
             self._figures_thread.add_task(self._open_panel.device.move_to_position_in_user_unit, position,
                                           device=self._open_panel.device)
 
+    def set_user_unit(self, user_unit: str) -> None:
+        self._user_unit = user_unit
+        self.int_text_widget_position.description = f"Position, {self._user_unit}"
+        self.int_text_widget_shift.description = f"Shift, {self._user_unit}"
+        self._figures_thread.set_user_unit(self._user_unit)
+
     def stop_motion(self) -> None:
         """
         Method stops motion.
@@ -125,7 +136,12 @@ class ControlPanel:
 
 class FiguresOutput:
 
-    def __init__(self) -> None:
+    def __init__(self, user_unit: str) -> None:
+        """
+        :param user_unit: user unit (for example, mm, deg).
+        """
+
+        self._user_unit: str = user_unit
         self._axs: Dict[str, Any] = None
         self._lock: threading.Lock = threading.Lock()
         self._running: bool = False
@@ -138,20 +154,25 @@ class FiguresOutput:
         return self._box
 
     def _create_figs(self) -> None:
-        data = {"position": {"y_label": "Position, mm",
-                             "color": "red"},
-                "speed": {"y_label": "Speed, mm/sec",
-                          "color": "orange"},
-                "power_current": {"y_label": "Current, mA",
-                                  "color": "green"},
-                "power_voltage": {"y_label": "Voltage, V",
-                                  "color": "blue"},
-                "temperature": {"y_label": "Temperature, °C",
-                                "color": "purple"}}
+        self._data = {"position": {"y_label": "Position, {}",
+                                   "color": "red",
+                                   "values": []},
+                      "speed": {"y_label": "Speed, {}/sec",
+                                "color": "orange",
+                                "values": []},
+                      "power_current": {"y_label": "Current, mA",
+                                        "color": "green",
+                                        "values": []},
+                      "power_voltage": {"y_label": "Voltage, V",
+                                        "color": "blue",
+                                        "values": []},
+                      "temperature": {"y_label": "Temperature, °C",
+                                      "color": "purple",
+                                      "values": []}}
         plt.ioff()
         self._figs = {}
         self._axs = {}
-        for fig_name, fig_data in data.items():
+        for fig_name, fig_data in self._data.items():
             self._figs[fig_name] = plt.figure(figsize=(4, 3))
             self._figs[fig_name].canvas.toolbar_visible = False
             self._figs[fig_name].canvas.header_visible = False
@@ -162,7 +183,7 @@ class FiguresOutput:
             self._axs[fig_name].plot([], [], color=fig_data["color"])
             self._axs[fig_name].grid(True)
             self._axs[fig_name].set_xlabel("Time, sec")
-            self._axs[fig_name].set_ylabel(fig_data["y_label"])
+            self._axs[fig_name].set_ylabel(fig_data["y_label"].format(self._user_unit))
         plt.ion()
 
         h_box_1 = widgets.HBox([self._figs["position"].canvas, self._figs["speed"].canvas])
@@ -209,11 +230,8 @@ class FiguresOutput:
         device = kwargs["device"]
         start_time = datetime.now()
         params = device.get_params_in_user_unit()
-        data = {"position": [params["position"]],
-                "speed": [params["speed"]],
-                "power_current": [params["power_current"]],
-                "power_voltage": [params["power_voltage"]],
-                "temperature": [params["temperature"]]}
+        for param_name, param_data in self._data.items():
+            param_data["values"] = [params[param_name]]
         times = [0]
         move_function(*args)
         while device.check_moving():
@@ -221,12 +239,12 @@ class FiguresOutput:
             if device_params:
                 delta_time = datetime.now() - start_time
                 times.append(delta_time.total_seconds())
-                for param_name, param_values in data.items():
-                    param_values.append(device_params[param_name])
-                    self._axs[param_name].lines[0].set_data(times, param_values)
+                for param_name, param_data in self._data.items():
+                    param_data["values"].append(device_params[param_name])
+                    self._axs[param_name].lines[0].set_data(times, param_data["values"])
                     self._axs[param_name].set_xlim([-1, max(times) + 1])
-                    self._axs[param_name].set_ylim([self._get_min_limit(param_values),
-                                                    self._get_max_limit(param_values)])
+                    self._axs[param_name].set_ylim([self._get_min_limit(param_data["values"]),
+                                                    self._get_max_limit(param_data["values"])])
                     plt.draw()
             time.sleep(0.5)
 
@@ -241,6 +259,11 @@ class FiguresOutput:
                     task = self._tasks.get()
                     task()
             time.sleep(0.5)
+
+    def set_user_unit(self, user_unit: str) -> None:
+        self._user_unit = user_unit
+        for param_name, param_data in self._data.items():
+            self._axs[param_name].set_ylabel(param_data["y_label"].format(self._user_unit))
 
     def start_thread(self) -> None:
         """
