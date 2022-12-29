@@ -69,7 +69,7 @@ def print_device_info_in_widgets(device) -> None:
     style = {"description_width": "150px"}
     text_widgets = [widgets.HTML("<h2>Device information</h2>")]
     for item_name, item_value in info:
-        text_widgets.append(widgets.Text(value=item_value, description=f"{item_name}:", style=style, disabled=True))
+        text_widgets.append(widgets.HTML(value=f"<b>{item_value}</b>", description=f"{item_name}:", style=style))
     layout = widgets.VBox(text_widgets)
     display(layout)
 
