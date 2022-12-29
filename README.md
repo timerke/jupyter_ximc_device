@@ -38,6 +38,6 @@ Python-обертка для работы с контроллерами шаго
 
 Работа приложения была проверена на следующих машинах:
 
-- *Windows 10*, *Python 3.6.8* (64 bit), *3.7.9* (64 bit), *3.8.10* (64 bit), *3.9.13* (64 bit), *3.10.7* (64 bit), *3.11.1* (64 bit). Имеется проблема установки Jupyter Notebook на 32 bit *Python* (о проблеме можно почитать, например, [здесь](https://stackoverflow.com/questions/67343397/how-to-fix-errors-occurring-on-installation-of-jupyter-notebook)). Поэтому для работы нужно использовать *Python* 64 bit;
-- *Ununtu 18.04*, *Python 3.6.9*;
-- *Ubuntu 20.04*, *Python 3.8.10*.
+- *Windows 10*, *Python 3.6.8* (64 bit), *3.7.9* (64 bit), *3.8.10* (64 bit), *3.9.13* (64 bit), *3.10.7* (64 bit), *3.11.1* (64 bit). Имеется проблема установки Jupyter Notebook на *Python* 32 bit (о проблеме можно почитать, например, [здесь](https://stackoverflow.com/questions/67343397/how-to-fix-errors-occurring-on-installation-of-jupyter-notebook)). Поэтому для работы нужно использовать *Python* 64 bit;
+- *Ununtu 18.04*, *Python 3.6.9*, *3.8.16*, *3.10.9*;
+- *Ubuntu 20.04*, *Python 3.8.10*, *3.10.9*, *3.11.1*.
