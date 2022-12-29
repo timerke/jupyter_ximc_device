@@ -144,6 +144,7 @@ class OpenPanel:
 
         with self.output:
             clear_output(wait=True)
+            ut.print_flush(f"libximc version: {ut.get_libximc_version()}")
             self._devices_type_and_uri = ut.search_devices()
         self.drop_down_devices.options = [f"{device_uri} ({device_type})" for device_type, device_uri in
                                           self._devices_type_and_uri]

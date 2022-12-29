@@ -14,7 +14,34 @@ def _get_virtual_device_file() -> str:
     return virtaul_device_file
 
 
+def analyze_found_devices(devices_type_and_uri: List[Tuple[str, str]]) -> None:
+    """
+    Function displays URI of real USB, Ethernet and virtual controllers.
+    :param devices_type_and_uri: list with types (real or virtual) and URI of
+    found controllers.
+    """
+
+    def find_devices_of_given_type(type_key: str, type_name: str, devices: List[str]) -> None:
+        devices_of_type = [device for device in devices if type_key in device]
+        if not devices_of_type:
+            print_flush(f"{type_name} controllers not found")
+        else:
+            print_flush(f"{type_name} controllers found:")
+            for device in devices_of_type:
+                print_flush(f"\t{device}")
+
+    real_devices = [device_uri for device_type, device_uri in devices_type_and_uri if device_type == "real"]
+    find_devices_of_given_type("xi-com:", "Real USB", real_devices)
+    find_devices_of_given_type("xi-net:", "Real Ethernet", real_devices)
+    virtual_devices = [device_uri for device_type, device_uri in devices_type_and_uri if device_type == "virtual"]
+    find_devices_of_given_type("xi-emu:", "Virtual", virtual_devices)
+
+
 def get_libximc_version() -> str:
+    """
+    :return: version of installed libximc module.
+    """
+
     string_buffer = ctypes.create_string_buffer(64)
     libximc.lib.ximc_version(string_buffer)
     return string_buffer.raw.decode().rstrip("\0")
@@ -86,6 +113,8 @@ def search_devices() -> List[Tuple[str, str]]:
         virtual_device_file = _get_virtual_device_file()
         virtual_device_name = f"xi-emu:///{virtual_device_file}"
         found_devices.append(("virtual", virtual_device_name))
+
+    analyze_found_devices(found_devices)
 
     if not found_devices:
         print_flush("Could not find any device")
