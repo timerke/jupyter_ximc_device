@@ -8,7 +8,7 @@ from ximc_device.device import XimcDevice
 
 class OpenPanel:
     """
-    Class for panel with widgets to open and close device.
+    Class for panel with widgets to search, open and close device.
     """
 
     DEFAULT_USER_UNITS_MULTIPLIER: float = 400
@@ -23,11 +23,15 @@ class OpenPanel:
 
     @property
     def device(self) -> Optional[XimcDevice]:
+        """
+        :return: object to control XIMC controller.
+        """
+
         return self._device
 
     def _create_widgets(self) -> None:
         """
-        Method creates widgets on panel.
+        Method creates widgets on panel to search, open and close device.
         """
 
         self.button_refresh = widgets.Button(description="Refresh", icon="rotate-right",
@@ -167,5 +171,10 @@ class OpenPanel:
                                           self._devices_type_and_uri]
 
     def set_control_panel(self, control_panel) -> None:
+        """
+        Method sets control panel with widgets to move and stop device.
+        :param control_panel: control panel with widgets.
+        """
+
         self._control_panel = control_panel
         self._control_panel.set_user_unit(self._user_unit)

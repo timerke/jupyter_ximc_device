@@ -88,7 +88,7 @@ class ControlPanel:
 
     def move_on_shift(self) -> None:
         """
-        Method runs motion on given shift.
+        Method runs motion on given shift (shift value is taken from widget with shift).
         """
 
         if self._check_device():
@@ -110,7 +110,8 @@ class ControlPanel:
 
     def move_to_position(self) -> None:
         """
-        Method runs motion to given position.
+        Method runs motion to given position (the position value is taken from the
+        widget with the position).
         """
 
         if self._check_device():
@@ -120,6 +121,12 @@ class ControlPanel:
                                           device=self._open_panel.device)
 
     def set_user_unit(self, user_unit: str) -> None:
+        """
+        Method sets user unit in the widgets and passes user unit to the object
+        that draws the charts in separate thread.
+        :param user_unit: user unit (for example, mm, deg).
+        """
+
         self._user_unit = user_unit
         self.int_text_widget_position.description = f"Position, {self._user_unit}"
         self.int_text_widget_shift.description = f"Shift, {self._user_unit}"
@@ -135,6 +142,9 @@ class ControlPanel:
 
 
 class FiguresOutput:
+    """
+    Class performs device movement tasks and draws graphs in a separate thread.
+    """
 
     def __init__(self, user_unit: str) -> None:
         """
@@ -150,10 +160,18 @@ class FiguresOutput:
         self._create_figs()
 
     @property
-    def box(self):
+    def box(self) -> widgets.VBox:
+        """
+        :return: box widget with figures.
+        """
+
         return self._box
 
     def _create_figs(self) -> None:
+        """
+        Method creates matplotlib figures and places them on ipywidgets.
+        """
+
         self._data = {"position": {"y_label": "Position, {}",
                                    "color": "red",
                                    "values": []},
@@ -192,6 +210,12 @@ class FiguresOutput:
 
     @staticmethod
     def _get_max_limit(values: List[float]) -> float:
+        """
+        Method returns upper bound for list of numbers.
+        :param values: list of numbers.
+        :return: upper bound.
+        """
+
         max_value = max(values)
         if max_value < 0:
             return 0.9 * max_value
@@ -201,6 +225,12 @@ class FiguresOutput:
 
     @staticmethod
     def _get_min_limit(values: List[float]) -> float:
+        """
+        Method returns lower bound for list of numbers.
+        :param values: list of numbers.
+        :return: lower bound.
+        """
+
         min_value = min(values)
         if min_value < 0:
             return 1.1 * min_value
@@ -210,10 +240,10 @@ class FiguresOutput:
 
     def add_task(self, task, *args, **kwargs) -> None:
         """
-        Method adds new task.
+        Method adds new task to do.
         :param task: function to be performed for task;
-        :param args: arguments for task;
-        :param kwargs:
+        :param args: non-keyword arguments for task function;
+        :param kwargs: keyword arguments for task function.
         """
 
         with self._lock:
@@ -223,8 +253,8 @@ class FiguresOutput:
         """
         Method performs task of starting a specific device movement.
         :param move_function: device move function;
-        :param args: arguments for move function;
-        :param kwargs:
+        :param args: non-keyword arguments for move function;
+        :param kwargs: keyword arguments for move functions.
         """
 
         device = kwargs["device"]
@@ -250,7 +280,7 @@ class FiguresOutput:
 
     def run_thread(self) -> None:
         """
-        Method processes tasks in a thread.
+        Method processes tasks in a separate thread.
         """
 
         while self._running:
@@ -261,13 +291,19 @@ class FiguresOutput:
             time.sleep(0.5)
 
     def set_user_unit(self, user_unit: str) -> None:
+        """
+        Method sets user unit in figures axes labels.
+        :param user_unit: user unit (for example, mm, deg).
+        """
+
         self._user_unit = user_unit
         for param_name, param_data in self._data.items():
             self._axs[param_name].set_ylabel(param_data["y_label"].format(self._user_unit))
 
     def start_thread(self) -> None:
         """
-        Method starts thread.
+        Method starts separate thread in which the tasks of device movement and
+        graph drawing are performed.
         """
 
         self._running = True

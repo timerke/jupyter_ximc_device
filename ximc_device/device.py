@@ -2,7 +2,7 @@ import ctypes
 import logging
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import libximc
 from ximc_device import utils as ut
 
@@ -10,9 +10,20 @@ from ximc_device import utils as ut
 logging.basicConfig(format="[%(asctime)s %(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 
 
-def check_open(func):
+def check_open(func) -> Callable:
+    """
+    Decorator to check if device is on.
+    :param func: decorated function.
+    """
 
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs) -> Any:
+        """
+        :param self:
+        :param args: non-keyword arguments for decorated function;
+        :param kwargs: keyword arguments for decorated function.
+        :return: result of decorated function.
+        """
+
         if self.device_id > 0:
             return func(self, *args, **kwargs)
         logging.info("Device not open")
@@ -43,7 +54,7 @@ class XimcDevice:
         """
         :param device_uri: URI of device to open;
         :param is_virtual: if True then device is virtual;
-        :param user_multiplier:
+        :param user_multiplier: coefficient for converting motor steps to user unit;
         :param defer_open: if True then device will not be opened.
         """
 
@@ -57,14 +68,23 @@ class XimcDevice:
 
     @property
     def device_id(self) -> int:
+        """
+        :return: controller ID.
+        """
+
         return self._device_id
 
     @property
     def device_uri(self) -> str:
+        """
+        :return: controller URI.
+        """
+
         return self._device_uri
 
     def _get_bootloader_or_firmware_version(self, firmware: bool = False) -> str:
         """
+        Method returns firmware of bootloader version of controller.
         :param firmware: if True then firmware version will be returned.
         :return: firmware or bootloader version.
         """
@@ -227,6 +247,11 @@ class XimcDevice:
 
     @check_open
     def get_params(self) -> Dict[str, Any]:
+        """
+        :return: dictionary with parameters of controller (moving status, position and
+        speed in steps of motor, power current and voltage, temperature).
+        """
+
         status = libximc.status_t()
         if libximc.lib.get_status(self._device_id, ctypes.byref(status)) == libximc.Result.Ok:
             return {"moving_status": status.MvCmdSts,
@@ -241,6 +266,11 @@ class XimcDevice:
 
     @check_open
     def get_params_in_user_unit(self) -> Dict[str, Any]:
+        """
+        :return: dictionary with parameters of controller (moving status, position and speed
+        in user unit, power current and voltage, temperature).
+        """
+
         status = libximc.status_calb_t()
         if libximc.lib.get_status_calb(self._device_id, ctypes.byref(status), ctypes.byref(self._user_unit)) ==\
                 libximc.Result.Ok:
@@ -333,11 +363,20 @@ class XimcDevice:
 
     @check_open
     def set_user_multiplier(self, multiplier: float) -> None:
+        """
+        Method set coefficient for converting motor steps to user unit.
+        :param multiplier: coefficient for converting motor steps to user unit.
+        """
+
         self._user_multiplier = 1 / multiplier
         self._user_unit.A = self._user_multiplier
 
     @check_open
     def stop_motion(self) -> None:
+        """
+        Method stops movement.
+        """
+
         if libximc.lib.command_sstp(self._device_id) != libximc.Result.Ok:
             logging.warning("Failed to stop moving")
 

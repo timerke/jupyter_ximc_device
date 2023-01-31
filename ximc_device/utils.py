@@ -8,6 +8,11 @@ import libximc
 
 
 def _get_virtual_device_file() -> str:
+    """
+    Function returns path to config file for virtual XIMC controller.
+    :return: path config file for virtual controller.
+    """
+
     virtaul_device_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "VirtualDevice")
     if os.altsep:
         virtaul_device_file = virtaul_device_file.replace(os.sep, os.altsep)
